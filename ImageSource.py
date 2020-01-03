@@ -1,90 +1,129 @@
 #!/usr/bin/env python
 
 from psd_tools import PSDImage
-from psd_tools.api.layers import Group, Layer
 import numpy as np
+from PIL import Image
+import cv2
+
+from functools import lru_cache
+from pathlib import Path
 
 from pprint import pprint
-from functools import lru_cache
-import os
-from pathlib import Path
-from itertools import chain
-from operator import attrgetter
-
 
 class ImageSource:
 
-    extension_to_glob = ["py", "avi"]
-
+    extension_to_glob = ["png"]
+    extension_to_save_as = "png"
+    ignore_character = "__"
+    default_dir = Path("./image_cache")
 
     def __init__(self, psd_path=None, directory=None, store_new=True):
         self.psd_path = Path(psd_path) if psd_path is not None else None
-        self.directory = Path(directory) if directory is not None else None
+        self.directory = Path(directory) if directory is not None else self.default_dir if self.default_dir.exists() else None
         self.store_new = store_new
-
-        self.directory_contents = None
-        self.psd = None
 
         if self.psd_path is None and self.directory is None:
             raise TypeError(f"{self.__class__.__name__} requires either a psd filepath or a directory.")
 
-        if self.psd_path is not None:
-            self.psd = PSDImage.open(self.psd_path)
+    @property
+    def directory_contents(self):
+        '''We lazily store the directory contents, and we cache the results the first time'''
 
-        if self.directory is not None:
-            self.directory_contents = set(path.name for extension in self.extension_to_glob for path in self.directory.glob(f"*.{extension}"))
+        if hasattr(self, "_directory_content"):
+            return self.directory_contents
+
+        if self.directory is None:
+            return set()
+
+        self._directory_contents = set(path.name for extension in self.extension_to_glob for path in self.directory.glob(f"*.{extension}"))
+
+        return self._directory_contents
+
+    @property
+    def psd(self):
+        '''We lazily open the psd file, and cache it for use later'''
+
+        if hasattr(self, "_psd"):
+            return self._psd
+
+        if self.psd_path is None:
+            return None
+
+        self._psd = PSDImage.open(self.psd_path)
+
+        return self._psd
+
+    @property
+    def psd_groups(self):
+        '''We lazily store the psd_groups and cache it for use later'''
+
+        if hasattr(self, "_psd_groups"):
+            return self._psd_groups
+
+        psd_groups = {}
+
+        for group in self.psd:
+            
+            #ignore top level layers
+            if not group.is_group():
+                continue
+
+            #ignore anything starting with '__'
+            if group.name.startswith(self.ignore_character):
+                continue
+
+            #get canonical groupname and layer names
+            groupname = group.name.lower().strip()
+            group_options = {layer.name.lower().strip(): layer for layer in group if not layer.name.startswith(self.ignore_character)}
+
+            psd_groups[groupname] = group_options
+
+        self._psd_groups = psd_groups
+
+        return psd_groups
 
     @lru_cache
     def get_image(self, state):
-        
-        if 
-        
 
+        #First check if it already exists in the directive if it was given
+        if state.filename in self.directory_contents:
+            return cv2.imread(str(self.directory / state.filename))
+            #pil_image = Image.open(self.directory / state.filename)
+            #return self.convert_to_cv_image(pil_image)###
 
-ImageSource(psd_path="./anim.psd", directory=".")
+        #otherwise we revert to using the psd file
+        return self.generate_image_from_psd(state)
 
+    def convert_to_cv_image(self, pil_image):
+        return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
+    def generate_image_from_psd(self, state):
 
+        #validate given state options
+        for key, value in state.data.items():
+            if key not in self.psd_groups:
+                raise KeyError(f"Received invalid key value: {key}:{value}")
 
+            if value not in self.psd_groups[key]:
+                raise ValueError(f"Received invalid option value: {key}:{value}")
 
-psd = PSDImage.open('anim.psd')
+        #setup psd file for composing
+        for key, value in state.data.items():
 
-#print(psd)
-#pprint(dir(psd))
+            #make all layers in the group invisible
+            for layer in self.psd_groups[key].values():
+                layer.visible = False
 
-#for layer in psd.descendants():
-#    print(layer)
+            #Then make the selected layer visible
+            self.psd_groups[key][value].visible = True
 
-#pprint(a)
+        #generate the image
+        pil_image = self.psd.compose(force=True)
 
+        #save the image to the directory if specified
+        if self.store_new:
+            directory = self.directory or self.default_dir
+            directory.mkdir(exist_ok=True)
+            pil_image.save(directory / state.filename)
 
-
-
-
-
-def make_video(fps, filenames):
-
-    print("Creating Video")
-
-    frame = get_frame(filenames[0])
-    height, width, layers = frame.shape
-    video = cv2.VideoWriter(video_name, 0, fps, (width,height))
-    
-    for filename in filenames:
-        frame = get_frame(filename)
-        video.write(frame)
-
-    cv2.destroyAllWindows()
-    video.release()
-
-@lru_cache
-def get_frame(filename):
-    #frame = cv2.imread(os.path.join(image_folder, filename))
-
-    return cv2.cvtColor(np.array(PILImage), cv2.COLOR_RGB2BGR)
-
-    if frame is None:
-        print(filename)
-        raise ValueError("Bad filepath: Check your keys")
-
-    return frame
+        return self.convert_to_cv_image(pil_image)
