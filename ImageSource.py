@@ -88,8 +88,6 @@ class ImageSource:
         #First check if it already exists in the directive if it was given
         if state.filename in self.directory_contents:
             return cv2.imread(str(self.directory / state.filename))
-            #pil_image = Image.open(self.directory / state.filename)
-            #return self.convert_to_cv_image(pil_image)###
 
         #otherwise we revert to using the psd file
         return self.generate_image_from_psd(state)

@@ -69,6 +69,4 @@ class State:
 
             parts.append(f"{key}-{value}")
 
-        parts.append(self.extension)
-
         return "_".join(parts)
