@@ -10,7 +10,7 @@ import sys
 def main():
     #args = getArgs()
 
-    script_path = "./script.txt"
+    script_path = "s1.py"
     output_path = "./test.avi"
     psd_path = "./anim.psd"
     directory = None
@@ -20,7 +20,7 @@ def main():
         "print_states": True
     }
 
-    Animator(script_path, output_path, psd_path=psd_path, directory=directory, store_new=store_new, **directives).animate()
+    Animator(script_path, output_path, psd_path=psd_path, directory=directory, store_new=store_new, **directives).animate()###
 
 def getArgs():
     argExpression = {
@@ -71,8 +71,8 @@ if __name__ == '__main__':
     DEBUG = True
 
     if DEBUG:
-        import doctest
-        print(doctest.testmod())
+        #import doctest
+        #print(doctest.testmod())
         main()
         exit()
 

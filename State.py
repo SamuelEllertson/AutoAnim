@@ -6,7 +6,7 @@ class State:
 
     def __init__(self, duration=200, options=None, data=None):
                 
-        self.duration = duration
+        self.duration = duration / 1000
 
         if data is None:
             self.data = dict()

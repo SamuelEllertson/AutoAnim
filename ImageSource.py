@@ -2,13 +2,10 @@
 
 from psd_tools import PSDImage
 import numpy as np
-from PIL import Image
 import cv2
 
 from functools import lru_cache
 from pathlib import Path
-
-from pprint import pprint
 
 class ImageSource:
 
@@ -104,6 +101,11 @@ class ImageSource:
 
             if value not in self.psd_groups[key]:
                 raise ValueError(f"Received invalid option value: {key}:{value}")
+
+            undefined_keys = set(self.psd_groups.keys()) - set(state.data.keys())
+
+            if len(undefined_keys) != 0:
+                raise ValueError(f"All keys must be defined. Currently missing: {undefined_keys!r}")
 
         #setup psd file for composing
         for key, value in state.data.items():

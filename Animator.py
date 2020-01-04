@@ -27,13 +27,14 @@ class Animator:
 
         if len(states) == 0:
             raise ValueError("Script contains no state")
+        
+        self.states = states
+        self.directives.update(directives)
 
-        if directives.get("print_states", False):
+        if self.directives.get("print_states", False):
             for state in states:
                 print(state)
 
-        self.states = states
-        self.directives.update(directives)
 
     def animate(self):
 
@@ -48,8 +49,7 @@ class Animator:
         height, width, layers = frame.shape
 
         try:
-            codec = cv2.VideoWriter_fourcc(*"mp4v")
-            codec = 0
+            codec = cv2.VideoWriter_fourcc(*"mp4v")###
         except:
             print("Bad Codec")
             codec = 0
