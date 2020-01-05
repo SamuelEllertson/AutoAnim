@@ -7,6 +7,7 @@ import cv2
 
 from ImageSource import ImageSource
 from ScriptParser import ScriptParser
+from State import State
 
 class Animator:
 
@@ -22,16 +23,12 @@ class Animator:
 
     def parse_script(self, print_states=False):
 
-        states = self.script_parser.parse_script(self.verbose)
+        temporal_dict = self.script_parser.parse_script(self.verbose)
 
-        if len(states) == 0:
+        if len(temporal_dict) == 0:
             raise ValueError("Script contains no state")
         
-        self.states = states
-
-        if print_states:
-            for state in states:
-                print(state)
+        self.temporal_dict = temporal_dict
 
         return self
 
@@ -62,13 +59,22 @@ class Animator:
 
     @property
     def frames(self):
-        for state in self.states:
-            frame = self.image_source.get_image(state)
 
-            frame_count = int(self.fps * state.duration / self.speed_multiplier)
+        states = self.temporal_dict
+        current_state = {}
 
-            if self.skip_short_frames and frame_count < 1:
-                continue
+        frame_time = 1 / (self.fps * self.speed_multiplier) 
+        
+        start, stop = states.min_time - frame_time / 2, states.min_time + frame_time / 2
 
-            for _ in range(frame_count):
-                yield frame
+        while start <= states.max_time:
+
+            for state in states[start: stop]:
+                current_state.update(state)
+
+            state_obj = State(current_state)
+            
+            yield self.image_source.get_image(state_obj)
+
+            start, stop = stop, stop + frame_time
+

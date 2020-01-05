@@ -8,7 +8,7 @@ def endloop():
 current_context = None
 
 def wait(time):
-    current_context.time += time
+    current_context.time += time / 1000
 
 def time():
     return current_context.time
@@ -132,8 +132,6 @@ class Model:
     def finish(self):
         self.add_option({})
 
-    def __iter__(self):
-        return iter(self.temporal_dict)
 
 _model = Model()
 

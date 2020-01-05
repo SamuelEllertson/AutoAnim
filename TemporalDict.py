@@ -2,36 +2,42 @@
 from collections import defaultdict
 from operator import itemgetter
 
-from State import State
-
 class TemporalDict:
     def __init__(self):
         self.data = defaultdict(dict)
+        self._sorted_data = None
+        self.dirty = True
 
     def add_entry(self, options, time):
         self.data[time].update(options)
+        self.dirty = True
 
-    def get_sorted_items(self):
-        return sorted(self.data.items(), key=itemgetter(0))
+    @property
+    def sorted_data(self):
 
-    def __iter__(self):
-        sorted_items = self.get_sorted_items()
+        if self._sorted_data is not None and not self.dirty:
+            return self.sorted_data
 
-        options = {}
-        rollover_time = 0
+        self._sorted_data = sorted(self.data.items(), key=itemgetter(0))
 
-        for (time_prev, state_dict_prev), (time_next, state_dict_next) in zip(sorted_items, sorted_items[1:]):
-            
-            duration = time_next - time_prev
+        return self._sorted_data
 
-            if options.copy().update(state_dict_prev) == options:
-                rollover_time += duration
-                continue
+    def __len__(self):
+        return len(self.data)
+    
+    @property
+    def min_time(self):
+        return self.sorted_data[0][0] 
 
-            duration += rollover_time
-            rollover_time = 0
+    @property
+    def max_time(self):
+        return self.sorted_data[-1][0]
 
-            options.update(state_dict_prev)
+    def __getitem__(self, key):
+        if not isinstance(key, slice):
+            return self.data[key]
 
-            yield State(duration=duration, data=options)
+        return list(item[1] for item in filter( (lambda x: key.start <= x[0] < key.stop), self.sorted_data)) ###This can be optimized to take advantaged of the sorted data
+
+
 

@@ -72,5 +72,5 @@ class ScriptParser:
 
         model.finish()
 
-        #returns a list of state objects
-        return list(model)
+        #returns the dict of time:option pairs
+        return model.temporal_dict

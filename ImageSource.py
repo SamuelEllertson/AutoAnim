@@ -19,23 +19,11 @@ class ImageSource:
         self.directory = Path(directory) if directory is not None else self.default_dir if self.default_dir.exists() else None
         self.store_new = store_new
         self.verbose = verbose
+        self.directory_contents = set(path.name for extension in self.extension_to_glob for path in self.directory.glob(f"*.{extension}"))
+        self.cache = {}
 
         if self.psd_path is None and self.directory is None:
             raise TypeError(f"{self.__class__.__name__} requires either a psd filepath or a directory.")
-
-    @property
-    def directory_contents(self):
-        '''We lazily store the directory contents, and we cache the results the first time'''
-
-        if hasattr(self, "_directory_content"):
-            return self.directory_contents
-
-        if self.directory is None:
-            return set()
-
-        self._directory_contents = set(path.name for extension in self.extension_to_glob for path in self.directory.glob(f"*.{extension}"))
-
-        return self._directory_contents
 
     @property
     def psd(self):
@@ -80,14 +68,26 @@ class ImageSource:
 
         return psd_groups
 
-    @lru_cache
     def get_image(self, state):
+        hash_val = hash(state)
+
+        if hash_val in self.cache:
+            if self.verbose:
+                print("Found Cached Image")
+                
+            return self.cache[hash_val]
+
+        image = self._get_image(state)
+        self.cache[hash_val] = image
+        return image
+
+    def _get_image(self, state):
 
         #First check if it already exists in the directive if it was given
         if state.filename in self.directory_contents:
 
             if self.verbose:
-                print("Found cached image")
+                print("Found Image")
 
             return cv2.imread(str(self.directory / state.filename))
 
@@ -96,6 +96,7 @@ class ImageSource:
 
         #otherwise we revert to using the psd file
         return self.generate_image_from_psd(state)
+
 
     def convert_to_cv_image(self, pil_image):
         return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
@@ -136,5 +137,6 @@ class ImageSource:
             directory = self.directory or self.default_dir
             directory.mkdir(exist_ok=True)
             pil_image.save(directory / state.filename)
+            self.directory_contents.add(state.filename)
 
         return self.convert_to_cv_image(pil_image)
