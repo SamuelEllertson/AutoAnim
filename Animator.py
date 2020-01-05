@@ -63,7 +63,7 @@ class Animator:
         states = self.temporal_dict
         current_state = {}
 
-        frame_time = 1 / (self.fps * self.speed_multiplier) 
+        frame_time = self.speed_multiplier / self.fps
         
         start, stop = states.min_time - frame_time / 2, states.min_time + frame_time / 2
 
@@ -73,7 +73,7 @@ class Animator:
                 current_state.update(state)
 
             state_obj = State(current_state)
-            
+
             yield self.image_source.get_image(state_obj)
 
             start, stop = stop, stop + frame_time
