@@ -6,7 +6,7 @@ import sys
 from Animator import Animator
 from my_utils.args import parseArgs
 
-
+from argparse import ArgumentTypeError
 
 def main():
     args = getArgs()
@@ -68,6 +68,16 @@ def getArgs():
             "help": "Sets the output Frames Per Second (default: 24)"
         }
     }
+    arg_speed_multiplier = {
+        "flags": ["-speed", "--speed-multiplier"],
+        "options": {
+            "dest": "speed_multiplier",
+            "type": float,
+            "default": 1.0,
+            "metavar": "float",
+            "help": "Set the speed of the output (default: 1.0)"
+        }
+    }
     arg_codec = {
         "flags": ["--codec"],
         "options": {
@@ -127,6 +137,7 @@ def getArgs():
             arg_psd_path,
             arg_directory_path,
             arg_fps,
+            arg_speed_multiplier,
             arg_codec,
             arg_verbose,
             arg_minimum_frames,
@@ -137,6 +148,9 @@ def getArgs():
     }
 
     args = parseArgs(parserSetup)
+
+    if args.speed_multiplier <= 0:
+        raise ArgumentTypeError(f"speed-multiplier must be a positive value")
 
     return args
 

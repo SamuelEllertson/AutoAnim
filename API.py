@@ -119,7 +119,6 @@ class Model:
 
     def __init__(self):
         self.temporal_dict = TemporalDict()
-        self.selected_option = None
 
     def __getattr__(self, value):
         return self.OptionAdder(self, value)
