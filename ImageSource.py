@@ -14,10 +14,11 @@ class ImageSource:
     ignore_character = "__"
     default_dir = Path("./image_cache")
 
-    def __init__(self, psd_path=None, directory=None, store_new=True):
+    def __init__(self, psd_path=None, directory=None, store_new=True, verbose=False):
         self.psd_path = Path(psd_path) if psd_path is not None else None
         self.directory = Path(directory) if directory is not None else self.default_dir if self.default_dir.exists() else None
         self.store_new = store_new
+        self.verbose = verbose
 
         if self.psd_path is None and self.directory is None:
             raise TypeError(f"{self.__class__.__name__} requires either a psd filepath or a directory.")
@@ -84,7 +85,14 @@ class ImageSource:
 
         #First check if it already exists in the directive if it was given
         if state.filename in self.directory_contents:
+
+            if self.verbose:
+                print("Found cached image")
+
             return cv2.imread(str(self.directory / state.filename))
+
+        if self.psd is None:
+            raise RuntimeError("Unable to gather all images needed for animation")
 
         #otherwise we revert to using the psd file
         return self.generate_image_from_psd(state)
@@ -93,6 +101,9 @@ class ImageSource:
         return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
     def generate_image_from_psd(self, state):
+
+        if self.verbose:
+                print("Generating new image")
 
         #validate given state options
         for key, value in state.data.items():

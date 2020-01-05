@@ -23,6 +23,7 @@ class ScriptParser:
         self.script_path = Path(script_path)
 
     def setup(self):
+        #Make the API functions inherently available to scripts
         builtins.wait = wait
         builtins.time = time
         builtins.ignore = ignore
@@ -32,12 +33,12 @@ class ScriptParser:
         builtins.get_model = get_model
         builtins._ = get_model()
 
+        #allow for scripts to be stored anywhere
         sys.path.insert(0, str(self.script_path.resolve().parents[0]))
-
         module = import_module(str(self.script_path.stem))
 
         if not hasattr(module, "main"):
-            raise SyntaxError("Must define a main method")
+            raise SyntaxError("Must define a main function")
 
         decorate_all_in_module(module, Loopable, ignored())
 
@@ -45,16 +46,31 @@ class ScriptParser:
 
         return module.main
 
-    def parse_script(self):###needs better name
+    def parse_script(self, verbose=False):
 
-        main = self.setup()
+        if verbose:
+            print("Setting up script environment")
+
+        script_main = self.setup()
         model = get_model()
 
-        main()
+        if verbose:
+            print("Executing script")
 
+        script_main()
+
+        if verbose:
+            print("Finished main")
+
+        #All open loops get implicitly stopped at the end of main()
         for func in get_waiting_funcs():
+
+            if verbose:
+                print("Implicitly stopping unstopped loop")
+
             func.stop()
 
         model.finish()
 
+        #returns a list of state objects
         return list(model)

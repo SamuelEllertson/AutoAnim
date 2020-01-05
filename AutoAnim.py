@@ -1,68 +1,142 @@
 #!/usr/bin/env python
 
-from Animator import Animator
+from pathlib import Path
+import sys
 
+from Animator import Animator
 from my_utils.args import parseArgs
 
-import sys
 
 
 def main():
-    #args = getArgs()
+    args = getArgs()
 
-    script_path = "./scripts/s1.py"
-    output_path = "./test.avi"
-    psd_path = "./anim.psd"
-    directory = None
-    store_new = True
-    print_states = False
+    animator = Animator(**args.__dict__)
+    animator.parse_script(print_states=args.print_states)
 
-    animator = Animator(script_path, output_path, psd_path=psd_path, directory=directory, store_new=store_new)
-    animator.parse_script(print_states=print_states)
-    animator.animate()
+    if not args.skip_video:
+        animator.animate()
 
 def getArgs():
-    arg_script_path = {###
+    arg_script_path = {
         "flags": ["-s", "--script-path"],
         "options": {
-            "default": Path.cwd(),
             "type": Path,
-            "dest": "source",
-            "help": "Source folder"
+            "required": True,
+            "metavar": "Path",
+            "dest": "script_path",
+            "help": "Path to script file"
         }
     }
-    argPerLine = {
-        "flags": ["-l","--lines"],
+    arg_output_path = {
+        "flags": ["-o", "--output-path"],
         "options": {
-            "dest": "perLine",
+            "default": Path("./output.avi"),
+            "type": Path,
+            "metavar": "Path",
+            "dest": "output_path",
+            "help": "Animation output path (default: output.avi)"
+        }
+    }
+    arg_psd_path = {
+        "flags": ["-p", "--psd-path"],
+        "options": {
+            "default": None,
+            "type": Path,
+            "metavar": "Path",
+            "dest": "psd_path",
+            "help": "Path to psd file that will be used to generate missing images"
+        }
+    }
+    arg_directory_path = {
+        "flags": ["-i", "--image-directory"],
+        "options": {
+            "default": Path("./image_cache"),
+            "type": Path,
+            "metavar": "Path",
+            "dest": "directory",
+            "help": "Path to directory for loading previously generated images and storing new images (default: ./image_cache)"
+        }
+    }
+    arg_fps = {
+        "flags": ["--fps"],
+        "options": {
+            "dest": "fps",
+            "type": int,
+            "default": 24,
+            "metavar": "int",
+            "help": "Sets the output Frames Per Second (default: 24)"
+        }
+    }
+    arg_codec = {
+        "flags": ["--codec"],
+        "options": {
+            "dest": "codec",
+            "type": str,
+            "default": "mp4v",
+            "metavar": "codec",
+            "help": "Sets the output video codec (default: mp4v)"
+        }
+    }
+    arg_store_new = {
+        "flags": ["--dont-store"],
+        "options": {
+            "dest": "store_new",
+            "action": "store_false",
+            "help": "If set newly generated images will not be stored to the image directory"
+        }
+    }
+    arg_verbose = {
+        "flags": ["-v", "--verbose"],
+        "options": {
+            "dest": "verbose",
             "action": "store_true",
-            "help": "Evaluate each line as unique expression"
+            "help": "Enable verbose output"
+        }
+    }
+    arg_minimum_frames = {
+        "flags": ["--skip-short-frames"],
+        "options": {
+            "dest": "skip_short_frames",
+            "action": "store_true",
+            "help": "if set, states with a duration shorter than the minimum frame time defined by the fps will be skipped. Default behavior is that all states get a minimum of one frame"
+        }
+    }
+    arg_print_states = {
+        "flags": ["--print-states"],
+        "options": {
+            "dest": "print_states",
+            "action": "store_true",
+            "help": "Print the full list of parsed states"
+        }
+    }
+    arg_skip_video = {
+        "flags": ["--skip-video"],
+        "options": {
+            "dest": "skip_video",
+            "action": "store_true",
+            "help": "Video file will not be created"
         }
     }
 
     parserSetup = {
-        "description": "Evaluates a simple math expression using python syntax",
+        "description": "Used to create animations",
         "args": [
-            argPerLine,
-            argExpression
+            arg_script_path,
+            arg_output_path,
+            arg_psd_path,
+            arg_directory_path,
+            arg_fps,
+            arg_codec,
+            arg_verbose,
+            arg_minimum_frames,
+            arg_print_states,
+            arg_skip_video,
+            arg_store_new
         ]
     }
 
     args = parseArgs(parserSetup)
-
-    #read from stdin if no expression is passed
-    if(args.input is None):
-        args.input = sys.stdin.read()
-
-    #default behavior: remove all whitespace, newlines, and tabs
-    regex = r"[\s]*"
-
-    #optional: if perLine option given, remove whitespace but not newlines
-    if args.perLine:
-        regex = r"[ \t]*"
-
-    #perform regex substitution and split on any newlines
-    args.expressions = re.sub(regex,"", args.input).rstrip().split("\n")
 
     return args
 
