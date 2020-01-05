@@ -1,4 +1,10 @@
 
+class EndLoopException(StopIteration):
+    pass
+
+def endloop():
+    raise EndLoopException("endloop called")
+
 current_context = None
 
 def wait(time):
@@ -26,7 +32,7 @@ funcs_need_eval = set()
 def get_waiting_funcs():
     return funcs_need_eval
 
-class FuncWrapper():
+class Loopable():
     def __init__(self, func):
         self.func = func
         self.time = 0
@@ -38,9 +44,23 @@ class FuncWrapper():
     def __hash__(self):
         return hash(self.func)
 
+    def once(self, *args, **kwargs):
+        self.__call__(*args, **kwargs)
+        return self
+
+    def twice(self, *args, **kwargs):
+        self.__call__(*args, **kwargs)
+        self.__call__(*args, **kwargs)
+        return self
+
     def loop(self, num, args=tuple(), kwargs=dict()):
-        for _ in range(num):
-            self.func(*args, **kwargs)
+        try:
+            for _ in range(num):
+                self.func(*args, **kwargs)
+        except EndLoopException:
+            pass
+
+        return self
 
     def loop_background(self, num=None, args=tuple(), kwargs=dict()):
         self.time = current_context.time
@@ -51,6 +71,8 @@ class FuncWrapper():
 
         funcs_need_eval.add(self)
 
+        return self
+
     def stop(self):
 
         if not self.needs_eval:
@@ -58,19 +80,27 @@ class FuncWrapper():
         self.needs_eval = False
 
         global current_context
+
         end_time = current_context.time
         temp, current_context = current_context, self
 
         cycles = 0
-        while time() < end_time:
-            if self.num is not None and cycles >= self.num:
-                break
+        try:
+            while time() < end_time:
 
-            self.func(*self.args, **self.kwargs)
+                if self.num is not None and cycles >= self.num:
+                    break
 
-            cycles += 1
+                self.func(*self.args, **self.kwargs)
 
-        current_context = temp
+                cycles += 1
+
+        except EndLoopException:
+            pass
+        finally:
+            current_context = temp
+
+        return self
 
 from TemporalDict import TemporalDict
 
@@ -106,47 +136,7 @@ class Model:
     def __iter__(self):
         return iter(self.temporal_dict)
 
-'''
-@func_Wrapper
-def blink():
-    #close eyes
-    _.eyes.close
-    #print(f"closed eyes at {time()}")
-    wait(5)
-    #open eyes
-    _.eyes.open
-    #print(f"opened eyes at {time()}")
-    wait(5)
+_model = Model()
 
-@func_Wrapper
-def breathe():
-    blink.loop_background()
-    
-    #inhale
-    _.lungs.full
-    #print(f"inhale at {time()}")
-    wait(10)
-
-    #exhale
-    _.lungs.normal
-    #print(f"exhale at {time()}")
-    wait(10)
-
-    blink.stop()
-
-
-@func_Wrapper
-def main():
-    breathe.loop_background()
-    wait(40)
-    breathe.stop()
-
-current_context = main
-
-main()
-_.finish()
-
-for state in _:
-    print(state)
-'''
-
+def get_model():
+    return _model

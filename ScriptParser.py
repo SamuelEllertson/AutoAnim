@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 from importlib import import_module
+from pathlib import Path
 import types
 import builtins
+import sys
 
-from API import wait, time, ignore, ignored, Model, FuncWrapper, set_current_context, get_waiting_funcs
+from API import wait, time, ignore, endloop, ignored, get_model, Loopable, set_current_context, get_waiting_funcs
 
 def decorate_all_in_module(module, decorator, to_ignore):
     for name in dir(module):
@@ -18,20 +20,26 @@ def decorate_all_in_module(module, decorator, to_ignore):
 
 class ScriptParser:
     def __init__(self, script_path):
-        self.script_path = script_path
+        self.script_path = Path(script_path)
 
     def setup(self):
         builtins.wait = wait
         builtins.time = time
         builtins.ignore = ignore
-        builtins._ = Model()
+        builtins.ignored = ignored
+        builtins.endloop = endloop
+        builtins.Loopable = Loopable
+        builtins.get_model = get_model
+        builtins._ = get_model()
 
-        module = import_module(self.script_path[:-3])###
+        sys.path.insert(0, str(self.script_path.resolve().parents[0]))
+
+        module = import_module(str(self.script_path.stem))
 
         if not hasattr(module, "main"):
             raise SyntaxError("Must define a main method")
 
-        decorate_all_in_module(module, FuncWrapper, ignored())
+        decorate_all_in_module(module, Loopable, ignored())
 
         set_current_context(module.main)
 
@@ -40,14 +48,13 @@ class ScriptParser:
     def parse_script(self):###needs better name
 
         main = self.setup()
+        model = get_model()
 
         main()
 
         for func in get_waiting_funcs():
             func.stop()
 
-        _.finish()
+        model.finish()
 
-        return list(_), {} ###
-
-
+        return list(model)

@@ -10,25 +10,25 @@ import sys
 def main():
     #args = getArgs()
 
-    script_path = "s1.py"
+    script_path = "./scripts/s1.py"
     output_path = "./test.avi"
     psd_path = "./anim.psd"
     directory = None
     store_new = True
+    print_states = False
 
-    directives = {
-        "print_states": True
-    }
-
-    Animator(script_path, output_path, psd_path=psd_path, directory=directory, store_new=store_new, **directives).animate()###
+    animator = Animator(script_path, output_path, psd_path=psd_path, directory=directory, store_new=store_new)
+    animator.parse_script(print_states=print_states)
+    animator.animate()
 
 def getArgs():
-    argExpression = {
-        "flags": "input",
+    arg_script_path = {###
+        "flags": ["-s", "--script-path"],
         "options": {
-            "nargs": "?",
-            "default": None,
-            "help": "The expression to evaluate"
+            "default": Path.cwd(),
+            "type": Path,
+            "dest": "source",
+            "help": "Source folder"
         }
     }
     argPerLine = {

@@ -10,31 +10,30 @@ from ScriptParser import ScriptParser
 
 class Animator:
 
-    def __init__(self, script_path, output_path, psd_path=None, directory=None, store_new=True, **directives):
+    def __init__(self, script_path, output_path, psd_path=None, directory=None, store_new=True, fps=8, codec="mp4v"):
         self.script_parser = ScriptParser(script_path=script_path)
         self.output_path = Path(output_path)
         self.image_source = ImageSource(psd_path=psd_path, directory=directory, store_new=store_new)
-        self.directives = {"fps": 8, **directives}
+        self.fps = fps
 
-        self.parse_script()
+        try:
+            self.codec = cv2.VideoWriter_fourcc(*codec)
+        except:
+            pass###
 
-    @property
-    def fps(self):
-        return self.directives["fps"]
-
-    def parse_script(self):
-        states, directives = self.script_parser.parse_script()
+    def parse_script(self, print_states=False):
+        states = self.script_parser.parse_script()
 
         if len(states) == 0:
             raise ValueError("Script contains no state")
         
         self.states = states
-        self.directives.update(directives)
 
-        if self.directives.get("print_states", False):
+        if print_states:
             for state in states:
                 print(state)
 
+        return self
 
     def animate(self):
 
@@ -42,19 +41,15 @@ class Animator:
             for frame in self.frames:
                 video.write(frame)
 
+        return self
+
     @property
     @contextmanager
     def video_writer(self):
         frame = next(self.frames)
         height, width, layers = frame.shape
 
-        try:
-            codec = cv2.VideoWriter_fourcc(*"mp4v")###
-        except:
-            print("Bad Codec")
-            codec = 0
-
-        writer = cv2.VideoWriter(str(self.output_path), codec, self.fps, (width, height))
+        writer = cv2.VideoWriter(str(self.output_path), self.codec, self.fps, (width, height))
 
         try:
             yield writer
@@ -67,5 +62,5 @@ class Animator:
         for state in self.states:
             frame = self.image_source.get_image(state)
 
-            for _ in range(max(1, int(self.fps * state.duration))):
+            for _ in range(max(1, int(self.fps * state.duration))):###minimum frame count should be an option
                 yield frame
