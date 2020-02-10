@@ -38,7 +38,7 @@ class ScriptParser:
         module = import_module(str(self.script_path.stem))
 
         if not hasattr(module, "main"):
-            raise SyntaxError("Must define a main function")
+            raise SyntaxError("Scripts must define a 'main' function")
 
         decorate_all_in_module(module, Loopable, ignored())
 

@@ -3,20 +3,16 @@ class EndLoopException(StopIteration):
     pass
 
 def endloop():
-    raise EndLoopException("endloop called")
+    raise EndLoopException
 
 current_context = None
 
 def get_current_context():
     global current_context
-
     return current_context
 
 def set_current_context(wrapped_func):
     global current_context
-
-    print("current context is ", wrapped_func)
-
     current_context = wrapped_func
 
 def wait(time):
@@ -32,11 +28,13 @@ def ignore(func):
     return func
 
 def ignored():
+    global funcs_to_ignore
     return funcs_to_ignore
 
 funcs_need_eval = set()
 
 def get_waiting_funcs():
+    global funcs_need_eval
     return funcs_need_eval
 
 class Loopable():
@@ -73,7 +71,7 @@ class Loopable():
         return self
 
     def loop_background(self, num=None, args=tuple(), kwargs=dict()):
-        self.time = current_context.time
+        self.time = get_current_context().time
         self.num = num
         self.args = args
         self.kwargs = kwargs
@@ -89,17 +87,11 @@ class Loopable():
             return
         self.needs_eval = False
 
-        global current_context
-
-        #target_end_time = current_context.time
-        #temp, current_context = current_context, self
-
         target_end_time = target or time()
+
+        #swap out the context
         previous_context = get_current_context()
         set_current_context(self)
-
-        print("target_end_time ", target_end_time)
-        print("loopable time: ", time())
 
         cycles = 0
         try:
@@ -116,8 +108,6 @@ class Loopable():
             pass
         finally:
             true_end_time = time()
-
-            print("loopable time: ", time())
             set_current_context(previous_context)
 
         return true_end_time - target_end_time
@@ -147,14 +137,10 @@ class Model:
         return getattr(self, value)
 
     def add_option(self, option):
-
-        print(f"setting {option!r} at time {time()}")
-
         self.temporal_dict.add_entry(option, time())
 
     def finish(self):
         self.add_option({})
-
 
 _model = Model()
 

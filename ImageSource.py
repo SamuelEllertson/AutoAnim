@@ -67,7 +67,7 @@ class ImageSource:
 
         return psd_groups
 
-    def get_image(self, state):
+    def get_image(self, state):#TODO: This is still wonky, and susceptible to collisions
         hash_val = hash(state)
 
         if hash_val in self.cache:
@@ -82,7 +82,7 @@ class ImageSource:
 
     def _get_image(self, state):
 
-        #First check if it already exists in the directive if it was given
+        #First check if it already exists in the directory if it was given
         if state.filename in self.directory_contents:
 
             if self.verbose:
@@ -116,7 +116,7 @@ class ImageSource:
             undefined_keys = set(self.psd_groups.keys()) - set(state.data.keys())
 
             if len(undefined_keys) != 0:
-                raise ValueError(f"All keys must be defined. Currently missing: {undefined_keys!r}")
+                raise ValueError(f"All settings must be specified during the first frame. Currently missing: {undefined_keys!r}")
 
         #setup psd file for composing
         for key, value in state.data.items():
