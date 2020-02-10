@@ -63,7 +63,7 @@ class Animator:
         states = self.temporal_dict
         current_state = {}
 
-        frame_time = self.speed_multiplier / self.fps
+        frame_time = self.speed_multiplier / self.fps * 1000
         
         start, stop = states.min_time - frame_time / 2, states.min_time + frame_time / 2
 

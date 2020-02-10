@@ -7,11 +7,23 @@ def endloop():
 
 current_context = None
 
+def get_current_context():
+    global current_context
+
+    return current_context
+
+def set_current_context(wrapped_func):
+    global current_context
+
+    print("current context is ", wrapped_func)
+
+    current_context = wrapped_func
+
 def wait(time):
-    current_context.time += time / 1000
+    get_current_context().time += time
 
 def time():
-    return current_context.time
+    return get_current_context().time
 
 funcs_to_ignore = set()
 
@@ -21,11 +33,6 @@ def ignore(func):
 
 def ignored():
     return funcs_to_ignore
-
-def set_current_context(wrapped_func):
-    global current_context
-
-    current_context = wrapped_func
 
 funcs_need_eval = set()
 
@@ -43,6 +50,9 @@ class Loopable():
 
     def __hash__(self):
         return hash(self.func)
+
+    def __repr__(self):
+        return f"Loopable(time={self.time}, func={self.func!r})"
 
     def once(self, *args, **kwargs):
         self.__call__(*args, **kwargs)
@@ -73,7 +83,7 @@ class Loopable():
 
         return self
 
-    def stop(self):
+    def stop(self, target=None):
 
         if not self.needs_eval:
             return
@@ -81,12 +91,19 @@ class Loopable():
 
         global current_context
 
-        end_time = current_context.time
-        temp, current_context = current_context, self
+        #target_end_time = current_context.time
+        #temp, current_context = current_context, self
+
+        target_end_time = target or time()
+        previous_context = get_current_context()
+        set_current_context(self)
+
+        print("target_end_time ", target_end_time)
+        print("loopable time: ", time())
 
         cycles = 0
         try:
-            while time() < end_time:
+            while time() < target_end_time:
 
                 if self.num is not None and cycles >= self.num:
                     break
@@ -98,9 +115,12 @@ class Loopable():
         except EndLoopException:
             pass
         finally:
-            current_context = temp
+            true_end_time = time()
 
-        return self
+            print("loopable time: ", time())
+            set_current_context(previous_context)
+
+        return true_end_time - target_end_time
 
 from TemporalDict import TemporalDict
 
@@ -127,6 +147,9 @@ class Model:
         return getattr(self, value)
 
     def add_option(self, option):
+
+        print(f"setting {option!r} at time {time()}")
+
         self.temporal_dict.add_entry(option, time())
 
     def finish(self):
