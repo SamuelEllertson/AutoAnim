@@ -81,7 +81,7 @@ class Loopable():
 
         return self
 
-    def stop(self, target=None):
+    def stop(self, target=None, should_wait=True):#TODO: verify wait works here
 
         if not self.needs_eval:
             return
@@ -110,7 +110,13 @@ class Loopable():
             true_end_time = time()
             set_current_context(previous_context)
 
-        return true_end_time - target_end_time
+        overtime = true_end_time - target_end_time
+
+        if should_wait:
+            wait(overtime)
+            return 0
+
+        return overtime
 
 from TemporalDict import TemporalDict
 

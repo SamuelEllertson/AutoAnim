@@ -113,10 +113,10 @@ class ImageSource:
             if value not in self.psd_groups[key]:
                 raise ValueError(f"Received invalid option value: {key}:{value}")
 
-            undefined_keys = set(self.psd_groups.keys()) - set(state.data.keys())
+        undefined_keys = set(self.psd_groups.keys()) - set(state.data.keys())
 
-            if len(undefined_keys) != 0:
-                raise ValueError(f"All settings must be specified during the first frame. Currently missing: {undefined_keys!r}")
+        if len(undefined_keys) != 0:
+            raise ValueError(f"All settings must be specified during the first frame. Currently missing: {undefined_keys!r}")
 
         #setup psd file for composing
         for key, value in state.data.items():

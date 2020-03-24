@@ -68,7 +68,7 @@ class ScriptParser:
             if verbose:
                 print("Implicitly stopping unstopped loop")
 
-            func.stop()
+            func.stop(should_wait=False)
 
         model.finish()
 
