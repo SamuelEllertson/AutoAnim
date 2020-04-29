@@ -11,14 +11,13 @@ from ScriptParser import ScriptParser
 
 class Animator:
 
-    def __init__(self, script_path, output_path, psd_path=None, directory=None, store_new=True, fps=24, codec="mp4v", verbose=False, skip_short_frames=False, speed_multiplier=1.0, **kwargs):
+    def __init__(self, script_path, output_path, psd_path=None, directory=None, store_new=True, fps=24, codec="mp4v", verbose=False, speed_multiplier=1.0, **kwargs):
         self.script_parser = ScriptParser(script_path=script_path)
         self.output_path = Path(output_path)
         self.image_source = ImageSource(psd_path=psd_path, directory=directory, store_new=store_new, verbose=verbose)
         self.fps = fps
         self.codec = cv2.VideoWriter_fourcc(*codec)
         self.verbose = verbose
-        self.skip_short_frames = skip_short_frames
         self.speed_multiplier = speed_multiplier
 
     def parse_script(self, print_states=False):

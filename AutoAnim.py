@@ -104,14 +104,6 @@ def getArgs():
             "help": "Enable verbose output"
         }
     }
-    arg_minimum_frames = {
-        "flags": ["--skip-short-frames"],
-        "options": {
-            "dest": "skip_short_frames",
-            "action": "store_true",
-            "help": "if set, states with a duration shorter than the minimum frame time defined by the fps will be skipped. Default behavior is that all states get a minimum of one frame"
-        }
-    }
     arg_print_states = {
         "flags": ["--print-states"],
         "options": {
@@ -140,7 +132,6 @@ def getArgs():
             arg_speed_multiplier,
             arg_codec,
             arg_verbose,
-            arg_minimum_frames,
             arg_print_states,
             arg_skip_video,
             arg_store_new
