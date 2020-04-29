@@ -64,4 +64,4 @@ class Animator:
     @property
     def frames(self):
         for state in self.temporal_dict.states(self.speed_multiplier, self.fps):
-            yield self.image_source.get_image(state_obj)
+            yield self.image_source.get_image(state)
