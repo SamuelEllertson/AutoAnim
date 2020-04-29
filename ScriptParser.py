@@ -6,7 +6,7 @@ import types
 import builtins
 import sys
 
-from API import wait, time, ignore, endloop, ignored, get_model, Loopable, set_current_context, get_waiting_funcs
+from API import wait, time, ignore, endloop, ignored, get_model, Loopable, set_current_context, get_waiting_funcs, set_state
 
 def decorate_all_in_module(module, decorator, to_ignore):
     for name in dir(module):
@@ -31,6 +31,7 @@ class ScriptParser:
         builtins.endloop = endloop
         builtins.Loopable = Loopable
         builtins.get_model = get_model
+        builtins.set_state = set_state
         builtins._ = get_model()
 
         #allow for scripts to be stored anywhere

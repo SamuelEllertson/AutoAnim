@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 
 from Animator import Animator
-from my_utils.args import parseArgs
+from args import parseArgs
 
 from argparse import ArgumentTypeError
 
@@ -69,7 +69,7 @@ def getArgs():
         }
     }
     arg_speed_multiplier = {
-        "flags": ["-speed", "--speed-multiplier"],
+        "flags": ["--speed"],
         "options": {
             "dest": "speed_multiplier",
             "type": float,

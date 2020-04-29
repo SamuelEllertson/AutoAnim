@@ -152,3 +152,6 @@ _model = Model()
 
 def get_model():
     return _model
+
+def set_state(key, value):
+    _model.add_option({key: value})

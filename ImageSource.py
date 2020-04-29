@@ -129,7 +129,7 @@ class ImageSource:
             self.psd_groups[key][value].visible = True
 
         #generate the image
-        pil_image = self.psd.compose(force=True)
+        pil_image = self.psd.compose(force=True) #todo: make force optional because its slow, but makes certain effects work
 
         #save the image to the directory if specified
         if self.store_new:

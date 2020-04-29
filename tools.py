@@ -1,3 +1,4 @@
+from random import choice
 
 class EmptySequenceError(BaseException):
     pass
@@ -29,6 +30,10 @@ class AnimTools:
 
         def add_action(self, action):
             self.actions.append(action)
+            return self
+
+        def random(self, *args, **kwargs):
+            self.actions.append(self.parent.random(*args, **kwargs))
             return self
 
         def cycle(self, *args, **kwargs):
@@ -113,6 +118,18 @@ class AnimTools:
             self.model[setting][options[0]]
 
         return self
+
+    def random(self, setting):
+
+        @Loopable
+        def random_selector():
+            option = choice(self.settings[setting])
+
+            set_state(setting, option)
+
+        self.loopers.append(random_selector)
+
+        return random_selector
 
     def cycle(self, setting, frame_time, down_time=0):
 

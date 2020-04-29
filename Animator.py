@@ -7,11 +7,11 @@ import cv2
 
 from ImageSource import ImageSource
 from ScriptParser import ScriptParser
-from State import State
+
 
 class Animator:
 
-    def __init__(self, script_path, output_path, psd_path=None, directory=None, store_new=True, fps=8, codec="mp4v", verbose=False, skip_short_frames=False, speed_multiplier=1.0, **kwargs):
+    def __init__(self, script_path, output_path, psd_path=None, directory=None, store_new=True, fps=24, codec="mp4v", verbose=False, skip_short_frames=False, speed_multiplier=1.0, **kwargs):
         self.script_parser = ScriptParser(script_path=script_path)
         self.output_path = Path(output_path)
         self.image_source = ImageSource(psd_path=psd_path, directory=directory, store_new=store_new, verbose=verbose)
@@ -29,6 +29,10 @@ class Animator:
             raise ValueError("Script contains no state")
         
         self.temporal_dict = temporal_dict
+
+        if print_states:
+            for state in temporal_dict.states(self.speed_multiplier, self.fps):
+                print(state) 
 
         return self
 
@@ -59,22 +63,5 @@ class Animator:
 
     @property
     def frames(self):
-
-        states = self.temporal_dict
-        current_state = {}
-
-        frame_time = self.speed_multiplier / self.fps * 1000
-        
-        start, stop = states.min_time - frame_time / 2, states.min_time + frame_time / 2
-
-        while start <= states.max_time:
-
-            for state in states[start: stop]:
-                current_state.update(state)
-
-            state_obj = State(current_state)
-
+        for state in self.temporal_dict.states(self.speed_multiplier, self.fps):
             yield self.image_source.get_image(state_obj)
-
-            start, stop = stop, stop + frame_time
-
