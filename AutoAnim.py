@@ -11,11 +11,14 @@ from argparse import ArgumentTypeError
 def main():
     args = getArgs()
 
-    animator = Animator(**args.__dict__)
-    animator.parse_script(print_states=args.print_states)
+    animator = Animator(args)
+    animator.parse_script()
 
-    if not args.skip_video:
+    if not args.no_output:
         animator.animate()
+
+    if args.verbose:
+        print("Finished")
 
 def getArgs():
     arg_script_path = {
@@ -112,12 +115,20 @@ def getArgs():
             "help": "Print the full list of parsed states"
         }
     }
-    arg_skip_video = {
-        "flags": ["--skip-video"],
+    arg_no_output = {
+        "flags": ["--no-output"],
         "options": {
-            "dest": "skip_video",
+            "dest": "no_output",
             "action": "store_true",
-            "help": "Video file will not be created"
+            "help": "Script will be parsed, but no output will be created"
+        }
+    }
+    arg_create_texture = {
+        "flags": ["-t", "--create-texture"],
+        "options": {
+            "dest": "create_texture",
+            "action": "store_true",
+            "help": "Instead of a video file, output animation as a tiled texture image"
         }
     }
 
@@ -133,15 +144,22 @@ def getArgs():
             arg_codec,
             arg_verbose,
             arg_print_states,
-            arg_skip_video,
-            arg_store_new
+            arg_no_output,
+            arg_store_new,
+            arg_create_texture
         ]
     }
 
     args = parseArgs(parserSetup)
 
+    args.directory.mkdir(exist_ok=True)
+
     if args.speed_multiplier <= 0:
         raise ArgumentTypeError(f"speed-multiplier must be a positive value")
+
+    #if creating a texture, and default output not changed, use .png
+    if args.create_texture and args.output_path == Path("./output.avi"):
+        args.output_path = Path("./output.png")
 
     return args
 

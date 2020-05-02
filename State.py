@@ -13,10 +13,16 @@ class State:
             self.data = data.copy()
 
     def __repr__(self):
-        return f"State(options={self.data!r})"
+        return repr(self.data)
 
     def __hash__(self):
-        return hash(frozenset(self.data.items()))
+        return hash(self.canonical_name)
+
+    def __eq__(self, other):
+        return type(self) == type(other) and self.canonical_name == other.canonical_name
+
+    def __iter__(self):
+        return iter(self.data.items())
 
     @property
     def filename(self):
@@ -38,3 +44,16 @@ class State:
             parts.append(f"{key}-{value}")
 
         return "_".join(parts)
+
+    def validate(self, psd_groups):
+        for key, value in self.data.items():
+            if key not in psd_groups:
+                raise KeyError(f"Received invalid key value: {key}:{value}")
+
+            if value not in psd_groups[key]:
+                raise ValueError(f"Received invalid option value: {key}:{value}")
+
+        undefined_keys = set(psd_groups.keys()) - set(self.data.keys())
+
+        if len(undefined_keys) != 0:
+            raise ValueError(f"All settings must be specified during the first frame. Currently missing: {undefined_keys!r}")

@@ -133,8 +133,9 @@ class Model:
         def __getitem__(self, value):
             return getattr(self, value)
 
-    def __init__(self):
-        self.temporal_dict = TemporalDict()
+    def __init__(self, args):
+        self.args = args
+        self.temporal_dict = TemporalDict(args)
 
     def __getattr__(self, value):
         return self.OptionAdder(self, value)
@@ -148,7 +149,11 @@ class Model:
     def finish(self):
         self.add_option({})
 
-_model = Model()
+_model = None
+
+def init_api(args):
+    global _model
+    _model = Model(args)
 
 def get_model():
     return _model

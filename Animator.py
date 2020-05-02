@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from pathlib import Path
+from math import ceil
+import numpy as np
 from contextlib import contextmanager
 
 import cv2
@@ -11,40 +12,55 @@ from ScriptParser import ScriptParser
 
 class Animator:
 
-    def __init__(self, script_path, output_path, psd_path=None, directory=None, store_new=True, fps=24, codec="mp4v", verbose=False, speed_multiplier=1.0, **kwargs):
-        self.script_parser = ScriptParser(script_path=script_path)
-        self.output_path = Path(output_path)
-        self.image_source = ImageSource(psd_path=psd_path, directory=directory, store_new=store_new, verbose=verbose)
-        self.fps = fps
-        self.codec = cv2.VideoWriter_fourcc(*codec)
-        self.verbose = verbose
-        self.speed_multiplier = speed_multiplier
+    def __init__(self, args):
+        self.args = args
+        self.script_parser = ScriptParser(args)
+        self.image_source = ImageSource(args)
+        self.codec = cv2.VideoWriter_fourcc(*args.codec)
 
-    def parse_script(self, print_states=False):
+    def parse_script(self):
 
-        temporal_dict = self.script_parser.parse_script(self.verbose)
+        temporal_dict = self.script_parser.parse_script()
 
         if len(temporal_dict) == 0:
             raise ValueError("Script contains no state")
         
         self.temporal_dict = temporal_dict
 
-        if print_states:
-            for state in temporal_dict.states(self.speed_multiplier, self.fps):
-                print(state) 
+        if self.args.print_states:
+            temporal_dict.print()
 
         return self
 
     def animate(self):
 
-        if self.verbose:
-            print("Creating video")
+        if self.args.verbose:
+            print("Creating animation")
+
+        if self.args.create_texture:
+            self.create_texture()
+        else:
+            self.create_video()
+
+        return self
+
+    def create_texture(self):
+        if self.args.verbose:
+            print("Writing frames to texture")
+
+        image_list = list(self.frames)
+
+        texture = self.stitch_images(image_list)
+
+        cv2.imwrite(str(self.args.output_path), texture)
+
+    def create_video(self):
+        if self.args.verbose:
+            print("Writing frames to video")
 
         with self.video_writer as video:
             for frame in self.frames:
                 video.write(frame)
-
-        return self
 
     @property
     @contextmanager
@@ -52,7 +68,7 @@ class Animator:
         frame = next(self.frames)
         height, width, layers = frame.shape
 
-        writer = cv2.VideoWriter(str(self.output_path), self.codec, self.fps, (width, height))
+        writer = cv2.VideoWriter(str(self.args.output_path), self.codec, self.args.fps, (width, height))
 
         try:
             yield writer
@@ -62,5 +78,27 @@ class Animator:
 
     @property
     def frames(self):
-        for state in self.temporal_dict.states(self.speed_multiplier, self.fps):
+        for state in self.temporal_dict.states:
             yield self.image_source.get_image(state)
+
+    def stitch_images(self, images):
+        image_matrix = self.get_image_matrix(images)
+        return cv2.vconcat([cv2.hconcat(rows) for rows in image_matrix])
+
+    def get_image_matrix(self, images):
+        n = len(images)
+        width = ceil(n ** 0.5)
+        height = ceil(n / width)
+
+        if n != width * height:
+            images = self.pad_with_blank(images, width, height)
+
+        return [images[i:i+width] for i in range(0, n, width)]
+
+    def pad_with_blank(self, images, width, height):
+        image_height, image_width, _ = images[0].shape
+        blank_image = np.zeros((image_height,image_width,3), np.uint8)
+
+        padding = [blank_image] * ((width * height) - len(images))
+
+        return images + padding

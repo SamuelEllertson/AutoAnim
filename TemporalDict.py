@@ -4,7 +4,8 @@ from operator import itemgetter
 from State import State
 
 class TemporalDict:
-    def __init__(self):
+    def __init__(self, args):
+        self.args = args
         self.data = defaultdict(dict)
         self._sorted_data = None
         self.dirty = True
@@ -40,10 +41,11 @@ class TemporalDict:
 
         return list(item[1] for item in filter( (lambda x: key.start <= x[0] < key.stop), self.sorted_data)) ###This can be optimized to take advantaged of the sorted data
     
-    def states(self, speed_multiplier, fps):
+    @property
+    def states(self):
         current_state = {}
 
-        frame_time = speed_multiplier / fps * 1000
+        frame_time = self.args.speed_multiplier / self.args.fps * 1000
         
         start, stop = self.min_time - frame_time / 2, self.min_time + frame_time / 2
 
@@ -57,4 +59,8 @@ class TemporalDict:
             yield state_obj
 
             start, stop = stop, stop + frame_time
+
+    def print(self):
+        for index, state in enumerate(self.states):
+            print(f"Frame {index}: {state!r}")
 

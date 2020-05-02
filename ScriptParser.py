@@ -1,26 +1,18 @@
 #!/usr/bin/env python
 
 from importlib import import_module
-from pathlib import Path
 import types
 import builtins
 import sys
 
-from API import wait, time, ignore, endloop, ignored, get_model, Loopable, set_current_context, get_waiting_funcs, set_state
-
-def decorate_all_in_module(module, decorator, to_ignore):
-    for name in dir(module):
-        obj = getattr(module, name)
-
-        if isinstance(obj, types.FunctionType):
-            if obj in to_ignore:
-                continue
-
-            setattr(module, name, decorator(obj))
+from API import init_api, wait, time, ignore, endloop, ignored, get_model, Loopable, set_current_context, get_waiting_funcs, set_state
 
 class ScriptParser:
-    def __init__(self, script_path):
-        self.script_path = Path(script_path)
+    def __init__(self, args):
+        self.args = args
+        self.script_path = args.script_path
+        
+        init_api(args)
 
     def setup(self):
         #Make the API functions inherently available to scripts
@@ -41,13 +33,15 @@ class ScriptParser:
         if not hasattr(module, "main"):
             raise SyntaxError("Scripts must define a 'main' function")
 
-        decorate_all_in_module(module, Loopable, ignored())
+        self.decorate_all_in_module(module, Loopable, ignored())
 
         set_current_context(module.main)
 
         return module.main
 
-    def parse_script(self, verbose=False):
+    def parse_script(self):
+
+        verbose = self.args.verbose
 
         if verbose:
             print("Setting up script environment")
@@ -75,3 +69,13 @@ class ScriptParser:
 
         #returns the dict of time:option pairs
         return model.temporal_dict
+
+    def decorate_all_in_module(self, module, decorator, to_ignore):
+        for name in dir(module):
+            obj = getattr(module, name)
+
+            if isinstance(obj, types.FunctionType):
+                if obj in to_ignore:
+                    continue
+
+                setattr(module, name, decorator(obj))
