@@ -52,7 +52,33 @@ class Animator:
 
         texture = self.stitch_images(image_list)
 
-        cv2.imwrite(str(self.args.output_path), texture)
+        self.save_texture(texture)
+
+    def save_texture(self, texture):
+        #Defaults to saving texture in full resolution
+        if self.args.texture_dimensions is None:
+
+            if self.args.verbose:
+                print("Saving full resolution texture")
+
+            cv2.imwrite(str(self.args.output_path), texture)
+            return
+
+        #Otherwise we pull out path information to give each produced texture a proper filename
+        original_path = self.args.output_path
+        stem = str(original_path.stem)
+        suffix = str(original_path.suffix)
+
+        for width, height in self.args.texture_dimensions:
+
+            if self.args.verbose:
+                print(f"Saving {width}x{height} texture")
+
+            new_path = str(original_path.with_name(f"{stem}_{width}x{height}{suffix}"))
+
+            resized = cv2.resize(texture, (width, height), interpolation = cv2.INTER_AREA)#TODO: make interpolation a CL argument
+
+            cv2.imwrite(new_path, resized)
 
     def create_video(self):
         if self.args.verbose:

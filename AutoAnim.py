@@ -10,7 +10,7 @@ from argparse import ArgumentTypeError
 
 def main(args):
 
-    handle_image_cache(args)
+    handle_directories(args)
 
     animator = Animator(args)
     animator.parse_script()
@@ -21,8 +21,12 @@ def main(args):
     if args.verbose:
         print("Finished")
 
-def handle_image_cache(args):
-    args.directory.mkdir(exist_ok=True)
+def handle_directories(args):
+    #ensure output directory exists
+    args.output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    #ensure image cache directory exists
+    args.directory.mkdir(parents=True, exist_ok=True)
 
     if args.clear_cache:
 
@@ -163,18 +167,39 @@ def getArgs():
                     "choices":("square", "horizontal", "vertical"),
                     "help": "Sets texture image layout (default: square)"
                 }
+            },
+            {
+                "flags": ["--texture-dimensions"],
+                "options": {
+                    "dest": "texture_dimensions",
+                    "metavar": "dimension list",
+                    "default":None,
+                    "help": "Takes a list of one or more widthXheight pairs for the output dimensions of the texture. Defaults to full scale. Example: --texture-dimensions 1280x800,1080x720"
+                }
             }
         ]
     }
 
     args = parseArgs(parserSetup)
 
+    #Texture dimension validation and extraction
+    if args.texture_dimensions is not None:
+        try:
+            dims = []
+            for pair in args.texture_dimensions.split(","):
+                width, _, height = pair.strip().lower().partition("x")
+                dims.append((int(width), int(height)))
+            args.texture_dimensions = dims
+        except Exception:
+            ArgumentTypeError("Invalid texture dimensions")
+
+    #Speed multiplier validation
     if args.speed_multiplier <= 0:
         raise ArgumentTypeError("speed-multiplier must be a positive value")
 
-    #Use the given output path, or default to output.{avi, png} depending on if we are creating a texture or video
+    #Use the given output path, or default to output/out.{avi, png} depending on if we are creating a texture or video
     if args.output_path is None:
-        args.output_path = Path("./output.png") if args.create_texture else Path("./output.avi")
+        args.output_path = Path("./output/out.png") if args.create_texture else Path("./output/out.avi")
 
     return args
 
