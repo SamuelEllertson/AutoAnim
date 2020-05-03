@@ -47,7 +47,7 @@ class ImageSource:
         if state.filename in self.directory_contents:
 
             if self.args.verbose:
-                print("Found saved Image")
+                print("Found cached image")
 
             return cv2.imread(str(self.args.directory / state.filename))
 

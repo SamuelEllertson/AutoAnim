@@ -34,9 +34,6 @@ class Animator:
 
     def animate(self):
 
-        if self.args.verbose:
-            print("Creating animation")
-
         if self.args.create_texture:
             self.create_texture()
         else:
@@ -46,9 +43,12 @@ class Animator:
 
     def create_texture(self):
         if self.args.verbose:
-            print("Writing frames to texture")
+            print("Collecting frames")
 
         image_list = list(self.frames)
+
+        if self.args.verbose:
+            print(f"Creating texture from {len(image_list)} frames")
 
         texture = self.stitch_images(image_list)
 
@@ -87,8 +87,17 @@ class Animator:
 
     def get_image_matrix(self, images):
         n = len(images)
-        width = ceil(n ** 0.5)
-        height = ceil(n / width)
+        layout = self.args.texture_layout
+
+        if layout == "square":
+            width = ceil(n ** 0.5)
+            height = ceil(n / width)
+        elif layout == "horizontal":
+            width = n
+            height = 1
+        elif layout == "vertical":
+            width = 1
+            height = n
 
         if n != width * height:
             images = self.pad_with_blank(images, width, height)
