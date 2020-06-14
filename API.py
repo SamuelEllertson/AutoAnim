@@ -158,5 +158,5 @@ def init_api(args):
 def get_model():
     return _model
 
-def set_state(key, value):
-    _model.add_option({key: value})
+def set_state(prop, option):
+    _model.add_option({prop: option})

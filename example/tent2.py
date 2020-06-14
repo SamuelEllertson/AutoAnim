@@ -12,20 +12,19 @@ def main():
     at = AnimTools(settings).init_with_first()
 
     #define sequences
-    at.sequence("Tent pulse").pulse('light', 300)
-    at.sequence("Left shooting star").full_transition("left_star", 100).set("left_star", "0")
-    at.sequence("Right shooting star").full_transition("right_star", 100).set("right_star", "0")
+    at.sequence("Tent pulse").pulse('light', 1000)
+    at.sequence("Left shooting star").full_transition("left_star", 1000).set("left_star", "0")
+    at.sequence("Right shooting star").full_transition("right_star", 1000).set("right_star", "0")
 
-    #Run Animation
+    #Run
     at.sequence("Tent pulse").loop_background()
 
-    wait(1500)
+    #wait(15000)
 
     at.sequence("Left shooting star").once()
 
-    wait(1500)
+    #wait(15000)
 
     at.sequence("Right shooting star").once()
 
-    wait(1000)
-
+    wait(4000)
