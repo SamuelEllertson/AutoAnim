@@ -10,11 +10,20 @@ class AnimTools:
         def __init__(self, parent, name):
             self.parent = parent
             self.name = name
+            self.pre_actions = []
+            self.run_preactions = False
             self.actions = []
             self.looper = self.make_looper()
 
         def __call__(self, *args, **kwargs):
             self.once(*args, **kwargs)
+
+        def __repr__(self):
+            return f"Sequence('{self.name}')"
+
+        def replace(self, sequence_name, *args, **kwargs):
+            self.looper.replace(self.parent.sequence(sequence_name), *args, **kwargs)
+            return self.parent.sequence(sequence_name)
 
         def make_looper(self):
 
@@ -23,10 +32,24 @@ class AnimTools:
                 if len(self.actions) == 0:
                     raise EmptySequenceError(f"sequence '{self.name}' is empty. Did you mistype the name?")
 
+                if self.run_preactions:
+                    self.run_preactions = False
+
+                    for action in self.pre_actions:
+                        action()
+
                 for action in self.actions:
                     action()
 
             return looper
+
+        def use_pre_actions(self, value):
+            self.run_preactions = value
+            return self
+
+        def add_pre_action(self, action):
+            self.pre_actions.append(action)
+            return self
 
         def add_action(self, action):
             self.actions.append(action)
@@ -208,9 +231,15 @@ class AnimTools:
     def stop_and_wait_for(self, *sequences):
         target = time()
 
-        wait(max(self.sequences[sequence_name].stop(target=target) for sequence_name in sequences))
+        wait(max(self.sequences[sequence_name].stop(target=target, should_wait=False) for sequence_name in sequences))
 
         return self
+
+    def replace_sequences(self, sequence_mapping):
+        target = time()
+
+        for from_sequence, to_sequence in sequence_mapping.items():
+            self.sequence(from_sequence).replace(to_sequence, target=target)
 
     def sequence(self, name):
         if name in self.sequences:

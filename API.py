@@ -70,8 +70,8 @@ class Loopable():
 
         return self
 
-    def loop_background(self, num=None, args=tuple(), kwargs=dict()):
-        self.time = get_current_context().time
+    def loop_background(self, num=None, start_time=None, args=tuple(), kwargs=dict()):
+        self.time = start_time or get_current_context().time
         self.num = num
         self.args = args
         self.kwargs = kwargs
@@ -80,6 +80,15 @@ class Loopable():
         funcs_need_eval.add(self)
 
         return self
+
+    def replace(self, loopable, num=None, target=None, args=tuple(), kwargs=dict()):
+        true_target = target or time()
+
+        self.stop(target=true_target, should_wait=False)
+
+        loopable.loop_background(num, start_time=self.time, args=args, kwargs=kwargs)
+
+        return loopable
 
     def stop(self, target=None, should_wait=True):#TODO: verify wait works here
 

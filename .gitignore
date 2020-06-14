@@ -1,6 +1,7 @@
 #your files here
 tests/
-
+image_cache/
+output/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
