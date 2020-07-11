@@ -136,7 +136,7 @@ class Model:
         self.temporal_dict = TemporalDict(args)
         self.aliases = {} # mapping from (setting, option) -> set((setting, option),...)
 
-    def add_option(self, setting, option, recursively_handled=None):#todo: verify correctness
+    def add_option(self, setting, option, recursively_handled=None):
         recursively_handled = recursively_handled or set()
 
         option_pair = (setting, option)

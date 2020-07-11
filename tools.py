@@ -263,6 +263,10 @@ class AnimTools:
 
         return self
 
+    def alias_name(self, alias, setting):
+        self.settings[alias] = self.settings[setting]
+        return self
+
 
 
 def pairs(iterable):
