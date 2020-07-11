@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-from psd_tools import PSDImage
+from psd_tools import PSDImage, compose
 import numpy as np
 import cv2
 
-from functools import cached_property, lru_cache
-
+from functools import cached_property, lru_cache, partial
+from multiprocessing.pool import Pool as ProcessPool
+from concurrent.futures import ThreadPoolExecutor as ThreadPool
 
 class ImageSource:
 
@@ -13,8 +14,11 @@ class ImageSource:
 
     def __init__(self, args):
         self.args = args
-        self.directory_contents = set(file.name for file in args.directory.glob("*.png"))
         self.psd = PSDImage.open(args.psd_path) if args.psd_path is not None else None
+        self.default_layers = set()
+
+    def current_directory_contents(self):
+        return set(file.name for file in self.args.directory.glob("*.png"))
 
     @cached_property
     def psd_groups(self):
@@ -24,12 +28,17 @@ class ImageSource:
 
         for group in self.psd:
             
-            #ignore top level layers
+            #top level layers are not controllable, but are important if visible
             if not group.is_group():
+                if group.is_visible():
+                    self.default_layers.add(group)
                 continue
 
-            #ignore anything starting with specified ignore character
+            #ignored groups are not controllable, but layers are important if visible
             if group.name.startswith(self.ignore_character):
+                for layer in group:
+                    if layer.is_visible():
+                        self.default_layers.add(layer)
                 continue
 
             #get canonical groupname and layer names
@@ -40,36 +49,43 @@ class ImageSource:
 
         return psd_groups
 
+    def create_frames(self, states):
+        current_files = self.current_directory_contents()
+        needed_states = (state for state in states if state.filename not in current_files)
+        to_be_created = list(dict.fromkeys(needed_states)) #remove duplicates
+
+        if len(to_be_created) != 0 and self.psd is None:
+            raise RuntimeError("Need to generate states but no psd file supplied.")
+
+        process_pool = ProcessPool() #for rendering the images: CPU bound
+        thread_pool = ThreadPool() #for saving the images: IO bound
+
+        try:
+            for image, state in process_pool.imap_unordered(self.generate_image_from_psd, to_be_created, chunksize=1):
+                save_image = partial(image.save, self.args.directory / state.filename)
+                thread_pool.submit(save_image)
+        except Exception:
+            process_pool.terminate()
+            thread_pool.shutdown()
+
     @lru_cache
     def get_image(self, state):
 
         #First check if it already exists in the directory if it was given
-        if state.filename in self.directory_contents:
+        if state.filename in self.current_directory_contents():
 
             if self.args.verbose:
                 print("Found cached image")
 
             return cv2.imread(str(self.args.directory / state.filename))
 
-        if self.psd is None:
-            raise RuntimeError("Unable to gather all images needed for animation")
-
         #otherwise we revert to using the psd file
-        return self.generate_image_from_psd(state)
+        image, _ = self.generate_image_from_psd(state)
 
+        return self.convert_to_cv_image(image)
 
     def convert_to_cv_image(self, pil_image):
         return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-
-    def set_psd_state(self, state):
-        for option, value in state:
-
-            #make all layers in the group invisible
-            for layer in self.psd_groups[option].values():
-                layer.visible = False
-
-            #Then make the selected layer visible
-            self.psd_groups[option][value].visible = True
 
     def generate_image_from_psd(self, state):
 
@@ -78,16 +94,8 @@ class ImageSource:
 
         if self.args.verbose:
             print("Generating new image")
+        
+        wanted_layers = set(self.psd_groups[option][value] for option, value in state) | self.default_layers
+        pil_image = compose(list(self.psd.descendants()), layer_filter=wanted_layers.__contains__, bbox=self.psd.viewbox)
 
-        #setup psd file for composing
-        self.set_psd_state(state)
-
-        #generate the image
-        pil_image = self.psd.compose(force=True) #todo: make force optional because its slow, but makes certain effects work
-
-        #save the image to the directory if specified
-        if self.args.store_new:
-            pil_image.save(self.args.directory / state.filename)
-            self.directory_contents.add(state.filename)
-
-        return self.convert_to_cv_image(pil_image)
+        return pil_image, state

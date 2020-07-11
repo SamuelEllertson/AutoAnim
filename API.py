@@ -1,5 +1,4 @@
 from TemporalDict import TemporalDict
-from collections import defaultdict
 
 class EndLoopException(StopIteration):
     pass
@@ -23,21 +22,11 @@ def wait(time):
 def time():
     return get_current_context().time
 
-funcs_to_ignore = set()
-
-def ignore(func):
-    funcs_to_ignore.add(func)
-    return func
-
-def ignored():
-    global funcs_to_ignore
-    return funcs_to_ignore
-
-funcs_need_eval = set()
+waiting_funcs = set()
 
 def get_waiting_funcs():
-    global funcs_need_eval
-    return funcs_need_eval
+    global waiting_funcs
+    return frozenset(waiting_funcs)
 
 class Loopable():
     def __init__(self, func):
@@ -77,9 +66,8 @@ class Loopable():
         self.num = num
         self.args = args
         self.kwargs = kwargs
-        self.needs_eval = True
 
-        funcs_need_eval.add(self)
+        waiting_funcs.add(self)
 
         return self
 
@@ -94,9 +82,10 @@ class Loopable():
 
     def stop(self, target=None, should_wait=True):
 
-        if not self.needs_eval:
+        if self not in waiting_funcs:
             return
-        self.needs_eval = False
+        else:
+            waiting_funcs.remove(self)
 
         target_end_time = target or time()
 

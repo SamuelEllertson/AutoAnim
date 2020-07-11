@@ -1,44 +1,44 @@
 #!/usr/bin/env python
 
 from importlib import import_module
-import types
-import builtins
 import sys
 
-from API import init_api, wait, time, ignore, endloop, ignored, get_model, Loopable, set_current_context, get_waiting_funcs, set_state, add_alias
+import API
+import tools
 
 class ScriptParser:
     def __init__(self, args):
         self.args = args
         self.script_path = args.script_path
         
-        init_api(args)
+        API.init_api(args)
 
-    def setup(self):
-        #Make the API functions inherently available to scripts
-        builtins.wait = wait
-        builtins.time = time
-        builtins.ignore = ignore
-        builtins.ignored = ignored
-        builtins.endloop = endloop
-        builtins.Loopable = Loopable
-        builtins.get_model = get_model
-        builtins.set_state = set_state
-        builtins.add_alias = add_alias
-        builtins._ = get_model()
+    def get_script(self):
+        
+        script = self.import_script()
 
-        #allow for scripts to be stored anywhere
+        self.setup_script(script)
+
+        return script
+
+    def import_script(self):
+        #dynamic module importing is a bit gross
         sys.path.insert(0, str(self.script_path.resolve().parents[0]))
-        module = import_module(str(self.script_path.stem))
+        script = import_module(str(self.script_path.stem))
 
-        if not hasattr(module, "main"):
+        #Make the API functions and AnimTools inherently available to scripts
+        script.__dict__.update(API.__dict__)
+        script.__dict__["AnimTools"] = tools.AnimTools
+
+        return script
+
+    def setup_script(self, script):
+        if not hasattr(script, "main"):
             raise SyntaxError("Scripts must define a 'main' function")
 
-        self.decorate_all_in_module(module, Loopable, ignored())
+        script.main = API.Loopable(script.main)
 
-        set_current_context(module.main)
-
-        return module.main
+        API.set_current_context(script.main)
 
     def parse_script(self):
 
@@ -47,36 +47,26 @@ class ScriptParser:
         if verbose:
             print("Setting up script environment")
 
-        script_main = self.setup()
-        model = get_model()
+        script = self.get_script()
 
         if verbose:
             print("Executing script")
 
-        script_main()
+        script.main()
 
         if verbose:
             print("Finished main")
 
         #All open loops get implicitly stopped at the end of main()
-        for func in get_waiting_funcs():
+        for func in API.get_waiting_funcs():
 
             if verbose:
                 print("Implicitly stopping unstopped loop")
 
             func.stop(should_wait=False)
 
+        model = API.get_model()
         model.finish()
 
         #returns the dict of time:option pairs
         return model.temporal_dict
-
-    def decorate_all_in_module(self, module, decorator, to_ignore):
-        for name in dir(module):
-            obj = getattr(module, name)
-
-            if isinstance(obj, types.FunctionType):
-                if obj in to_ignore:
-                    continue
-
-                setattr(module, name, decorator(obj))

@@ -1,4 +1,5 @@
 from random import choice
+from API import *
 
 class EmptySequenceError(BaseException):
     pass
