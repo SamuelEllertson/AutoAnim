@@ -5,7 +5,7 @@ import types
 import builtins
 import sys
 
-from API import init_api, wait, time, ignore, endloop, ignored, get_model, Loopable, set_current_context, get_waiting_funcs, set_state
+from API import init_api, wait, time, ignore, endloop, ignored, get_model, Loopable, set_current_context, get_waiting_funcs, set_state, add_alias
 
 class ScriptParser:
     def __init__(self, args):
@@ -24,6 +24,7 @@ class ScriptParser:
         builtins.Loopable = Loopable
         builtins.get_model = get_model
         builtins.set_state = set_state
+        builtins.add_alias = add_alias
         builtins._ = get_model()
 
         #allow for scripts to be stored anywhere

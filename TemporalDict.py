@@ -10,9 +10,10 @@ class TemporalDict:
         self._sorted_data = None
         self.dirty = True
 
-    def add_entry(self, options, time):
-        self.data[time].update(options)
-        self.dirty = True
+    def add_entry(self, setting, option, time):
+        if setting is not None:
+            self.data[time].update({setting: option})
+            self.dirty = True
 
     @property
     def sorted_data(self):

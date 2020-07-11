@@ -11,7 +11,7 @@ class AnimTools:
             self.parent = parent
             self.name = name
             self.pre_actions = []
-            self.run_preactions = False
+            self.run_preactions = True
             self.actions = []
             self.looper = self.make_looper()
 
@@ -43,7 +43,7 @@ class AnimTools:
 
             return looper
 
-        def use_pre_actions(self, value):
+        def use_pre_actions(self, value=True):
             self.run_preactions = value
             return self
 
@@ -117,15 +117,6 @@ class AnimTools:
         self.loopers = []
         self.sequences = {}
 
-    @property
-    def model(self):
-        '''A convienience property to access the model for primarily internal use
-        
-        Returns:
-            Model -- The scenes Model object
-        '''
-        return get_model()
-
     def smart_range(self, From, To):
         '''range function that is inclusive on both sides and also automatically decreases when To < From'''
 
@@ -138,7 +129,7 @@ class AnimTools:
         '''Sets each setting of the scene with the first option provided to AnimTools'''
 
         for setting, options in self.settings.items():
-            self.model[setting][options[0]]
+            set_state(setting, options[0])
 
         return self
 
@@ -159,7 +150,7 @@ class AnimTools:
         @Loopable
         def cycler():
             for option in self.settings[setting]:
-                self.model[setting][option]
+                set_state(setting, option)                
                 wait(frame_time)
 
             wait(down_time)
@@ -173,13 +164,13 @@ class AnimTools:
         @Loopable
         def pulser():
             for option in self.settings[setting]:
-                self.model[setting][option]
+                set_state(setting, option)
                 wait(frame_time)
 
             wait(hold_time)
 
             for option in self.settings[setting][-2:0:-1]:
-                self.model[setting][option]
+                set_state(setting, option)
                 wait(frame_time)
 
             wait(down_time)
@@ -201,7 +192,7 @@ class AnimTools:
             for index in self.smart_range(from_index, to_index):
                 setting_value = settings[index]
 
-                self.model[setting][setting_value]
+                set_state(setting, setting_value)
 
                 wait(frame_time)
 
@@ -254,6 +245,27 @@ class AnimTools:
         settings = self.settings[setting]
         true_value = value if isinstance(value, str) else settings[value]
 
-        self.model[setting][true_value]
+        set_state(setting, true_value)
 
         return self
+
+    def alias_all(self, *settings):
+        """create bidirectional aliases between all settings specified. It is assumed they all have
+        an equal number of options"""
+
+        for setting1, setting2 in pairs(settings):
+            options1 = self.settings[setting1]
+            options2 = self.settings[setting2]
+
+            for option1, option2 in zip(options1, options2):
+                add_alias(setting1, option1, setting2, option2)
+                add_alias(setting2, option2, setting1, option1)
+
+        return self
+
+
+
+def pairs(iterable):
+    items = tuple(iterable)
+
+    return zip(items, items[1:])

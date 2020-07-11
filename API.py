@@ -1,3 +1,5 @@
+from TemporalDict import TemporalDict
+from collections import defaultdict
 
 class EndLoopException(StopIteration):
     pass
@@ -53,12 +55,12 @@ class Loopable():
         return f"Loopable(time={self.time}, func={self.func!r})"
 
     def once(self, *args, **kwargs):
-        self.__call__(*args, **kwargs)
+        self.func(*args, **kwargs)
         return self
 
     def twice(self, *args, **kwargs):
-        self.__call__(*args, **kwargs)
-        self.__call__(*args, **kwargs)
+        self.func(*args, **kwargs)
+        self.func(*args, **kwargs)
         return self
 
     def loop(self, num, args=tuple(), kwargs=dict()):
@@ -71,7 +73,7 @@ class Loopable():
         return self
 
     def loop_background(self, num=None, start_time=None, args=tuple(), kwargs=dict()):
-        self.time = start_time or get_current_context().time
+        self.time = start_time or time()
         self.num = num
         self.args = args
         self.kwargs = kwargs
@@ -90,7 +92,7 @@ class Loopable():
 
         return loopable
 
-    def stop(self, target=None, should_wait=True):#TODO: verify wait works here
+    def stop(self, target=None, should_wait=True):
 
         if not self.needs_eval:
             return
@@ -127,36 +129,36 @@ class Loopable():
 
         return overtime
 
-from TemporalDict import TemporalDict
-
 class Model:
-
-    class OptionAdder:
-        def __init__(self, model, option):
-            self.model = model
-            self.option = option
-
-        def __getattr__(self, value):
-            self.model.add_option({self.option: value})
-
-        def __getitem__(self, value):
-            return getattr(self, value)
 
     def __init__(self, args):
         self.args = args
         self.temporal_dict = TemporalDict(args)
+        self.aliases = {} # mapping from (setting, option) -> set((setting, option),...)
 
-    def __getattr__(self, value):
-        return self.OptionAdder(self, value)
+    def add_option(self, setting, option, recursively_handled=None):#todo: verify correctness
+        recursively_handled = recursively_handled or set()
 
-    def __getitem__(self, value):
-        return getattr(self, value)
+        option_pair = (setting, option)
 
-    def add_option(self, option):
-        self.temporal_dict.add_entry(option, time())
+        if option_pair in recursively_handled:
+            return
+        else:
+            recursively_handled.add(option_pair)
+
+        self.temporal_dict.add_entry(setting, option, time())
+
+        for aliased_setting, aliased_option in self.aliases.get(option_pair, []):
+            self.add_option(aliased_setting, aliased_option, recursively_handled=recursively_handled)
+
+    def add_alias(self, trigger_setting, trigger_option, aliased_setting, aliased_option):
+        trigger_option_pair = (trigger_setting, trigger_option)
+        aliased_option_pair = (aliased_setting, aliased_option)
+
+        self.aliases.setdefault(trigger_option_pair, set()).add(aliased_option_pair)
 
     def finish(self):
-        self.add_option({})
+        self.add_option(None, None)
 
 _model = None
 
@@ -165,7 +167,11 @@ def init_api(args):
     _model = Model(args)
 
 def get_model():
+    global _model
     return _model
 
-def set_state(prop, option):
-    _model.add_option({prop: option})
+def set_state(setting, option):
+    get_model().add_option(setting, option)
+
+def add_alias(trigger_setting, trigger_option, aliased_setting, aliased_option):
+    get_model().add_alias(trigger_setting, trigger_option, aliased_setting, aliased_option)
