@@ -176,7 +176,15 @@ def getArgs():
                     "default":None,
                     "help": "Takes a list of one or more widthXheight pairs for the output dimensions of the texture. Defaults to full scale. Example: --texture-dimensions 1280x800,1080x720"
                 }
-            }
+            },
+            {
+                "flags": ["--force-vector"],
+                "options": {
+                    "dest": "force_vector",
+                    "action": "store_true",
+                    "help": "enables force vector mode in psd-tools compositing. Can solve some rending problems, but is very slow."
+                }
+            },
         ]
     }
 

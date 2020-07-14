@@ -1,4 +1,3 @@
-from tools import AnimTools
 
 def main():
     

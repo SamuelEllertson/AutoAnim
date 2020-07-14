@@ -34,6 +34,12 @@ class Animator:
 
     def animate(self):
 
+        if self.args.store_new:
+            if self.args.verbose:
+                print("Finding/Generating frames")
+
+            self.image_source.create_frames(self.temporal_dict.states)
+
         if self.args.create_texture:
             self.create_texture()
         else:
@@ -81,6 +87,7 @@ class Animator:
             cv2.imwrite(new_path, resized)
 
     def create_video(self):
+
         if self.args.verbose:
             print("Writing frames to video")
 

@@ -2,6 +2,7 @@
 tests/
 image_cache/
 output/
+venv_1.8/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
