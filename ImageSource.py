@@ -47,6 +47,11 @@ class ImageSource:
 
             psd_groups[groupname] = group_options
 
+        #set all animatable layers to visible, which we will then filter later
+        for group in psd_groups.values():
+            for layer in group.values():
+                layer.visible = True
+
         return psd_groups
 
     def create_frames(self, states):
@@ -57,16 +62,19 @@ class ImageSource:
         if len(to_be_created) != 0 and self.psd is None:
             raise RuntimeError("Need to generate states but no psd file supplied.")
 
-        process_pool = ProcessPool() #for rendering the images: CPU bound
-        thread_pool = ThreadPool() #for saving the images: IO bound
+        #process_pool = ProcessPool() #for rendering the images: CPU bound
+        #thread_pool = ThreadPool() #for saving the images: IO bound
+        #try:
+        #    for image, state in process_pool.imap_unordered(self.generate_image_from_psd, to_be_created, chunksize=1):
+        #        save_image = partial(image.save, self.args.directory / state.filename)
+        #        thread_pool.submit(save_image)
+        #except Exception:
+        #    process_pool.terminate()
+        #    thread_pool.shutdown()
 
-        try:
-            for image, state in process_pool.imap_unordered(self.generate_image_from_psd, to_be_created, chunksize=1):
-                save_image = partial(image.save, self.args.directory / state.filename)
-                thread_pool.submit(save_image)
-        except Exception:
-            process_pool.terminate()
-            thread_pool.shutdown()
+        for state in to_be_created:
+            image, _ = self.generate_image_from_psd(state)
+            image.save(self.args.directory / state.filename)
 
     @lru_cache
     def get_image(self, state):
@@ -96,6 +104,13 @@ class ImageSource:
             print("Generating new image")
         
         wanted_layers = set(self.psd_groups[option][value] for option, value in state) | self.default_layers
-        pil_image = compose(list(self.psd.descendants()), layer_filter=wanted_layers.__contains__, bbox=self.psd.viewbox)
+        
+        filterer = lambda x: x.kind == "group" or x in wanted_layers
+
+        #pil_image = compose(list(self.psd.descendants()), layer_filter=wanted_layers.__contains__, bbox=self.psd.viewbox)
+
+        #currently: ignore_preview is required for it to produce correct results, but 1.9 psd.composite() is 
+        #significantly slower than 1.8 compose()
+        pil_image = self.psd.composite(layer_filter=filterer, ignore_preview=True)
 
         return pil_image, state
