@@ -9,7 +9,6 @@ import cv2
 from ImageSource import ImageSource
 from ScriptParser import ScriptParser
 
-
 class Animator:
 
     def __init__(self, args):

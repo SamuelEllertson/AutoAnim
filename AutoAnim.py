@@ -223,5 +223,7 @@ if __name__ == '__main__':
 
     try:
         main(args)
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         print(f"AutoAnim: an error occured: {e}", file=sys.stderr)

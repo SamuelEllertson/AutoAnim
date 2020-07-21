@@ -5,8 +5,16 @@ import numpy as np
 import cv2
 
 from functools import cached_property, lru_cache, partial
+
 from multiprocessing.pool import Pool as ProcessPool
 from concurrent.futures import ThreadPoolExecutor as ThreadPool
+
+import signal
+
+def ignore_signal():
+    """Ignore CTRL+C in the worker process."""
+
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 class ImageSource:
 
@@ -50,26 +58,41 @@ class ImageSource:
         return psd_groups
 
     def create_frames(self, states):
+
+        self.validate_states(states)
+
+        states_to_be_created = self.get_nonexistent_states(states)
+
+        if len(states_to_be_created) != 0 and self.psd is None:
+            raise RuntimeError("Need to generate states but no psd file supplied.")
+    
+        #ProcessPool for CPU bound image creation, ThreadPool for IO bound file saving
+        with ProcessPool(initializer=ignore_signal) as process_pool, ThreadPool() as thread_pool:
+            try:
+                for image, state in process_pool.imap_unordered(self.generate_image, states_to_be_created):
+                    save_image = partial(image.save, self.args.directory / state.filename)
+                    thread_pool.submit(save_image)
+            except KeyboardInterrupt:
+                process_pool.terminate()
+                thread_pool.shutdown(wait=False)
+
+                raise KeyboardInterrupt from None
+
+    def validate_states(self, states):
+        for state in states:
+            state.validate(self.psd_groups)
+
+    def get_nonexistent_states(self, states):
         current_files = self.current_directory_contents()
         needed_states = (state for state in states if state.filename not in current_files)
-        to_be_created = list(dict.fromkeys(needed_states)) #remove duplicates
+        required = list(dict.fromkeys(needed_states)) #removes duplicates, keep order
 
-        if len(to_be_created) != 0 and self.psd is None:
-            raise RuntimeError("Need to generate states but no psd file supplied.")
-
-        process_pool = ProcessPool() #for rendering the images: CPU bound
-        thread_pool = ThreadPool() #for saving the images: IO bound
-
-        try:
-            for image, state in process_pool.imap_unordered(self.generate_image_from_psd, to_be_created, chunksize=1):
-                save_image = partial(image.save, self.args.directory / state.filename)
-                thread_pool.submit(save_image)
-        except Exception:
-            process_pool.terminate()
-            thread_pool.shutdown()
+        return required
 
     @lru_cache
     def get_image(self, state):
+
+        state.validate(self.psd_groups)
 
         #First check if it already exists in the directory if it was given
         if state.filename in self.current_directory_contents():
@@ -80,17 +103,14 @@ class ImageSource:
             return cv2.imread(str(self.args.directory / state.filename))
 
         #otherwise we revert to using the psd file
-        image, _ = self.generate_image_from_psd(state)
+        image, _ = self.generate_image(state)
 
         return self.convert_to_cv_image(image)
 
     def convert_to_cv_image(self, pil_image):
         return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
-    def generate_image_from_psd(self, state):
-
-        #validate given state options
-        state.validate(self.psd_groups)
+    def generate_image(self, state):
 
         if self.args.verbose:
             print("Generating new image")

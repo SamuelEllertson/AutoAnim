@@ -1,7 +1,7 @@
-from random import choice
 from API import *
+from random import choice
 
-class EmptySequenceError(BaseException):
+class EmptySequenceError(Exception):
     pass
 
 class AnimTools:
@@ -267,8 +267,6 @@ class AnimTools:
     def alias_name(self, alias, setting):
         self.settings[alias] = self.settings[setting]
         return self
-
-
 
 def pairs(iterable):
     items = tuple(iterable)

@@ -42,8 +42,7 @@ class TemporalDict:
 
         return list(item[1] for item in filter( (lambda x: key.start <= x[0] < key.stop), self.sorted_data)) ###This can be optimized to take advantaged of the sorted data
     
-    @property
-    def states(self):
+    def states_generator(self):
         current_state = {}
 
         frame_time = self.args.speed_multiplier / self.args.fps * 1000
@@ -60,6 +59,10 @@ class TemporalDict:
             yield state_obj
 
             start, stop = stop, stop + frame_time
+
+    @property
+    def states(self):
+        return list(self.states_generator())
 
     def print(self):
         for index, state in enumerate(self.states):
